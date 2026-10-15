@@ -1,12 +1,9 @@
-"""Executable entry point for laboratory work 1."""
-
 from task1 import run_password_analysis
 from task2 import run_access_control_checks
 from task3 import run_user_storage_and_login_demo
 
 
 def main() -> None:
-    """Run all assignments in laboratory work 1."""
     run_password_analysis()
     run_access_control_checks()
     run_user_storage_and_login_demo()

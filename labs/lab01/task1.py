@@ -1,5 +1,3 @@
-"""Password-strength analysis for laboratory work 1."""
-
 import os
 import random
 import sys
@@ -33,14 +31,14 @@ FORBIDDEN_PASSWORDS = {"pass", "root", "user", "1234", "admin123", "password"}
 
 
 def add_random_duplicates(passwords: list[str]) -> list[str]:
-    """Append duplicates of passwords selected at three random indexes."""
+    """Додає 3 випадкові дублікати паролів."""
     selected_indexes = random.sample(range(len(passwords)), k=3)
     passwords.extend(passwords[index] for index in selected_indexes)
     return passwords
 
 
 def has_special_character(password: str) -> bool:
-    """Return whether a password contains a non-alphanumeric character."""
+    """Перевіряє наявність спецсимволу."""
     return any(not character.isalnum() for character in password)
 
 
@@ -50,7 +48,7 @@ def assess_password(
     criteria: dict[str, int | bool],
     forbidden_passwords: set[str],
 ) -> str:
-    """Classify a password using the specified security criteria."""
+    """Оцінює надійність пароля за критеріями."""
     min_length = int(criteria["min_length"])
     has_digit = any(character.isdigit() for character in password)
     has_upper = any(character.isupper() for character in password)
@@ -82,7 +80,7 @@ def assess_password(
 
 
 def run_password_analysis() -> None:
-    """Print student details and a table of password-strength results."""
+    """Аналіз списку паролів та вивід результатів."""
     passwords = add_random_duplicates(PASSWORDS.copy())
     print(f"Студент: {STUDENT_NAME}")
     print(f"Група: {GROUP_NAME}")

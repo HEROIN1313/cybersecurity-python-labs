@@ -1,5 +1,3 @@
-"""Password hashing, CSV storage, and JSON login logging."""
-
 import csv
 import hashlib
 import json
@@ -28,31 +26,31 @@ users_db: list[tuple[str, str]] = []
 
 
 class ValidationError(Exception):
-    """Raised when an input value does not meet laboratory validation rules."""
+    pass
 
 
 def generate_hash(password: str, salt: str = "00000") -> str:
-    """Return a SHA-512 hex digest for a valid password and non-empty salt."""
+    """Генерація sha512 хешу для пароля та солі."""
     if not password or not salt:
-        raise ValueError("Password and salt must not be empty.")
+        raise ValueError("Пароль і сіль не можуть бути порожніми.")
     if len(password) < MIN_PASSWORD_LENGTH:
         raise ValidationError(
-            f"Password must contain at least {MIN_PASSWORD_LENGTH} characters."
+            f"Пароль має містити щонайменше {MIN_PASSWORD_LENGTH} символів."
         )
     return hashlib.sha512(f"{password}{salt}".encode()).hexdigest()
 
 
 def create_user(username: str, password: str) -> tuple[str, str]:
-    """Create a username and SHA-512 password-hash pair."""
+    """Створення запису користувача з хешем пароля."""
     if not username:
-        raise ValueError("Username must not be empty.")
+        raise ValueError("Логін не може бути порожнім.")
     return username, generate_hash(password, PERSONAL_SALT)
 
 
 def create_users(
     users_list: tuple[tuple[str, str], ...],
 ) -> list[tuple[str, str]]:
-    """Validate users, write valid records to CSV, and return those records."""
+    """Запис валідних користувачів у CSV-файл."""
     DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
     created_users: list[tuple[str, str]] = []
     with USERS_FILE.open("w", newline="", encoding="utf-8") as csv_file:
@@ -69,7 +67,7 @@ def create_users(
 
 
 def read_users() -> list[tuple[str, str]]:
-    """Read user records from the CSV database."""
+    """Зчитування користувачів з файлу users.csv."""
     with USERS_FILE.open("r", newline="", encoding="utf-8") as csv_file:
         return [
             (row[0], row[1]) for row in csv.reader(csv_file) if len(row) == 2
@@ -77,7 +75,6 @@ def read_users() -> list[tuple[str, str]]:
 
 
 def _read_log_events() -> list[dict[str, object]]:
-    """Read existing log events, returning an empty list for a new log file."""
     if not LOG_FILE.exists():
         return []
     with LOG_FILE.open("r", encoding="utf-8") as log_file:
@@ -86,7 +83,7 @@ def _read_log_events() -> list[dict[str, object]]:
 
 
 def log_event(function: Callable[P, bool]) -> Callable[P, bool]:
-    """Record every login attempt in a JSON list without exposing passwords."""
+    """Декоратор для запису спроб входу у log.json."""
 
     @wraps(function)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> bool:
@@ -116,15 +113,15 @@ def log_event(function: Callable[P, bool]) -> Callable[P, bool]:
 
 @log_event
 def login(username: str, password: str) -> bool:
-    """Return whether username and password match a stored user record."""
+    """Перевірка логіна та пароля."""
     if not username or not password:
-        raise ValueError("Username and password must not be empty.")
+        raise ValueError("Логін і пароль не можуть бути порожніми.")
     password_hash = generate_hash(password, PERSONAL_SALT)
     return (username, password_hash) in users_db
 
 
 def run_user_storage_and_login_demo() -> None:
-    """Create the user database, display it, and demonstrate logged logins."""
+    """Створення бази, читання та перевірка входу."""
     global users_db
     users_to_register = (
         ("analyst_01", "SecurePassword@01"),
@@ -143,7 +140,7 @@ def run_user_storage_and_login_demo() -> None:
         users_db = read_users()
         print("\nКористувачі з users.csv")
         print(f"{'Логін':<16} Хеш пароля")
-        print("-" * 80)
+        print("-" * 79)
         for username, password_hash in users_db:
             print(f"{username:<16} {password_hash}")
 

@@ -1,5 +1,3 @@
-"""Multilevel access-control checks for laboratory work 1."""
-
 USERS = {
     "ciso_office": {
         "role": "ciso",
@@ -49,7 +47,7 @@ BLOCKED_USERS = {"legacy_sys", "malicious_user", "expired_guest"}
 
 
 def check_access(username: str, resource_level: int) -> tuple[bool, str]:
-    """Return the access decision and its explanatory message."""
+    """Перевірка прав доступу користувача до ресурсу."""
     user = USERS.get(username)
     if user is None:
         return False, "User not found"
@@ -63,7 +61,7 @@ def check_access(username: str, resource_level: int) -> tuple[bool, str]:
 
 
 def run_access_control_checks() -> None:
-    """Print resources and every required user-resource access decision."""
+    """Вивід списку ресурсів та перевірка доступу."""
     print("\nРесурси системи")
     for resource, level in RESOURCES:
         print(f"{resource}: {SECURITY_LEVELS[level - 1]}")
