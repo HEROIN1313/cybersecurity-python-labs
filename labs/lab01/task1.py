@@ -12,13 +12,13 @@ from shared.student import GROUP_NAME, STUDENT_NAME, VARIANT_NUMBER
 PASSWORDS = [
     "Security@2023",
     "pass",
-    "MyStrong#Key",
+    "MyStr0ng#Key",
     "root",
     "Advanc3d@Pass",
     "user",
-    "Protec7! Pass",
+    "Protec7!Pass",
     "1234",
-    "Elite@Security",
+    "Elite@Secur1ty",
     "admin123",
 ]
 CRITERIA = {
