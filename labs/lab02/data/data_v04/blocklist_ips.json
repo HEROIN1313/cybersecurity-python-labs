@@ -1,11 +1,11 @@
 [
   {
     "ip_address": "203.0.113.77",
-    "attempts": 6,
+    "attempts": 7,
     "target_users": [
       "admin"
     ],
     "window_start": "2026-09-27 14:00:00",
-    "window_end": "2026-09-27 14:02:55"
+    "window_end": "2026-09-27 14:03:30"
   }
 ]

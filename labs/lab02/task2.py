@@ -17,7 +17,7 @@ AUTH_PATTERN = re.compile(
 )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class AuthEvent:
     """Подія автентифікації SSH."""
 
@@ -27,7 +27,7 @@ class AuthEvent:
     ip_address: str
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class BruteForceAlert:
     """Виявлена атака підбору паролів."""
 
@@ -46,25 +46,41 @@ def parse_auth_log(path: Path, year: int | None = None) -> list[AuthEvent]:
     log_year = year if year is not None else datetime.now().year
     events: list[AuthEvent] = []
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    for line_number, line in enumerate(lines, start=1):
+
+    for line_no, line in enumerate(lines, start=1):
         match = AUTH_PATTERN.search(line)
         if match is None:
             continue
         try:
-            timestamp = datetime.strptime(
-                f"{log_year} {match['timestamp']}", "%Y %b %d %H:%M:%S"
+            ts = datetime.strptime(
+                f"{log_year} {match['timestamp']}",
+                "%Y %b %d %H:%M:%S",
             ).replace(tzinfo=None)
         except ValueError:
-            LOGGER.warning("Пропуск рядка %d: некоректний час", line_number)
+            LOGGER.warning("Пропуск рядка %d: некоректний час", line_no)
             continue
         events.append(
-            AuthEvent(timestamp, match["status"], match["user"], match["ip"])
+            AuthEvent(ts, match["status"], match["user"], match["ip"])
         )
 
-    events.sort(key=lambda event: event.timestamp)
-    LOGGER.info(
-        "Оброблено %d рядків, виявлено %d подій SSH", len(lines), len(events)
-    )
+    events.sort(key=lambda e: e.timestamp)
+
+    if events:
+        t_start = events[0].timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        t_end = events[-1].timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        LOGGER.info(
+            "Оброблено %d рядків, виявлено %d подій SSH (Time range: %s — %s)",
+            len(lines),
+            len(events),
+            t_start,
+            t_end,
+        )
+    else:
+        LOGGER.info(
+            "Оброблено %d рядків, подій SSH не знайдено",
+            len(lines),
+        )
+
     return events
 
 
@@ -81,31 +97,35 @@ def detect_bruteforce(
     failures: defaultdict[str, deque[AuthEvent]] = defaultdict(deque)
     alerts: list[BruteForceAlert] = []
     alerted_ips: set[str] = set()
+
     for event in events:
         if event.status != "Failed":
             continue
-        attempts = failures[event.ip_address]
-        attempts.append(event)
-        while attempts and event.timestamp - attempts[0].timestamp > window:
-            attempts.popleft()
-        if len(attempts) > threshold and event.ip_address not in alerted_ips:
-            alert = BruteForceAlert(
-                ip_address=event.ip_address,
-                attempts=len(attempts),
-                target_users=tuple(
-                    sorted({item.username for item in attempts})
-                ),
-                window_start=attempts[0].timestamp,
-                window_end=event.timestamp,
-            )
-            alerts.append(alert)
-            alerted_ips.add(event.ip_address)
-            LOGGER.error(
-                "Виявлено брутфорс з %s: %d спроб (користувачі: %s)",
-                alert.ip_address,
-                alert.attempts,
-                ", ".join(alert.target_users),
-            )
+        q = failures[event.ip_address]
+        q.append(event)
+        while q and event.timestamp - q[0].timestamp > window:
+            q.popleft()
+
+    for ip, q in failures.items():
+        if len(q) <= threshold:
+            continue
+        users = sorted({e.username for e in q})
+        alert = BruteForceAlert(
+            ip_address=ip,
+            attempts=len(q),
+            target_users=tuple(users),
+            window_start=q[0].timestamp,
+            window_end=q[-1].timestamp,
+        )
+        alerts.append(alert)
+        alerted_ips.add(ip)
+        LOGGER.error(
+            "Брутфорс з %s: %d спроб (користувачі: %s)",
+            ip,
+            len(q),
+            ", ".join(users),
+        )
+
     return alerts
 
 
@@ -138,6 +158,7 @@ def run_analysis(
     LOGGER.info("Аналіз подій автентифікації у %s", auth_log)
     events = parse_auth_log(auth_log)
     alerts = detect_bruteforce(events, threshold, window_min)
+
     print("=== SSH Bruteforce Detection Results ===")
     print(
         f"Failed Attempts Threshold: >{threshold} attempts in "
@@ -146,12 +167,16 @@ def run_analysis(
     for alert in alerts:
         users = ", ".join(alert.target_users)
         print(
-            f"[ALERT] Bruteforce Detected! IP: {alert.ip_address} | "
-            f"Total Failures: {alert.attempts} | Target Users: {users}"
+            f"[ALERT] Bruteforce Detected! IP: "
+            f"{alert.ip_address} | Total Failures: "
+            f"{alert.attempts} | Target Users: {users}"
         )
+
     print("=== Recommended Blocklist (IPs) ===")
     for alert in alerts:
         print(alert.ip_address)
+
     if output_json is not None:
         export_blocked_ips(alerts, output_json)
+
     return alerts

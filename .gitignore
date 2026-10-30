@@ -1,6 +1,13 @@
+# Python virtual environments
 .venv/
 venv/
+
+# Byte-compiled / cache files
 __pycache__/
 *.pyc
+
+# Linter caches
 .ruff_cache/
+
+# Runtime laboratory data
 labs/lab01/data/
